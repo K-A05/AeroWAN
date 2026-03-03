@@ -1,0 +1,25 @@
+**Completed**
+
+- Modular directory structure under `src/` with `daemon/`, `transport/`, `network/`, `utils/`, and `types/`
+- `daemon/mod.rs` — `Daemon` struct with `new()` and `run()` lifecycle
+- `daemon/config.rs` — full config system with search paths, defaults, and TOML serialisation, scoped to `~/.config/aerowan/`
+- `daemon/signals.rs` — shutdown signal handling
+- `transport/reticulum.rs` — Reticulum transport init with interface spawning
+- `transport/iroh.rs` — iroh QUIC endpoint init with configurable bind port and secret key
+- `utils/identity.rs` — persistent identity management for both Reticulum and iroh, keys survive restarts
+- `main.rs` — thin entry point
+
+**Persistent state on disk**
+- `~/.config/aerowan/config.toml`
+- `~/.config/aerowan/identity.key` (Reticulum, hex encoded)
+- `~/.config/aerowan/iroh.key` (iroh, raw bytes)
+
+**Not yet started**
+- `daemon/api.rs` — LAN-facing API server for clients on the AP
+- `network/ap.rs` — interface monitoring and AP state awareness
+- `network/routing.rs` — routing logic
+- `types/mod.rs` — shared error types and traits
+- `utils/logging.rs` and `utils/crypto.rs`
+- systemd service unit file for deployment on the Pi
+
+The immediate next milestone is the LAN API server. 

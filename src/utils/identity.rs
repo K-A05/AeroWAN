@@ -1,8 +1,12 @@
 use std::path::Path;
 use reticulum::identity::PrivateIdentity;
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore};
+use iroh::SecretKey;
+
+
 
 const IDENTITY: &str = "identity.key";
+const IROH_KEY: &str = "iroh.key";
 
 pub fn load_or_create_reticulum_identity(config_dir: &Path) -> Result<PrivateIdentity, Box<dyn std::error::Error>> {
     let key_path = config_dir.join(IDENTITY);
@@ -17,6 +21,25 @@ pub fn load_or_create_reticulum_identity(config_dir: &Path) -> Result<PrivateIde
         std::fs::write(&key_path, identity.to_hex_string())?;
         log::info!("Generated new Reticulum identity, saved to {}", key_path.display());
         Ok(identity)
+    }
+}
+
+pub fn load_or_create_iroh_key(config_dir: &Path) -> Result<SecretKey, Box<dyn std::error::Error>>{
+     let key_path = config_dir.join(IROH_KEY);
+
+    if key_path.exists() {
+        let bytes = std::fs::read(&key_path)?;
+        let arr: [u8; 32] = bytes.try_into().map_err(|_| "iroh key file has wrong length")?;
+        let key = SecretKey::from_bytes(&arr);
+        log::info!("Loaded iroh secret key from {}", key_path.display());
+        Ok(key)
+    } else {
+        let mut bytes = [0u8; 32];
+        OsRng.fill_bytes(&mut bytes);
+        let key = SecretKey::from_bytes(&bytes);
+        std::fs::write(&key_path, key.to_bytes())?;
+        log::info!("Generated new iroh secret key, saved to {}", key_path.display());
+        Ok(key)
     }
 }
 

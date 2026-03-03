@@ -10,6 +10,7 @@ use reticulum::transport::Transport;
 pub struct Daemon {
     transport: Transport,
     iroh_endpoint: Option<Endpoint>,
+    #[allow(dead_code)]  // config_path will be used in the future for dynamic config reloads.
     config_path: std::path::PathBuf,
 }
 
@@ -24,10 +25,10 @@ impl Daemon {
         log::info!("AeroWAN daemon starting");
         log::info!("Configuration loaded from: {}", config_path.display());
 
-        let transport = ReticulumTransport::init(&config, &config_path.parent().unwrap()).await?;
-        let iroh_endpoint = IrohTransport::init(&config).await?;
+        let transport = ReticulumTransport::init(&config, &config_path).await?;
+        let iroh_endpoint = IrohTransport::init(&config, &config_path).await?;
 
-        Ok(Self { transport, iroh_endpoint, config_path })
+        Ok(Self { transport, iroh_endpoint, config_path})
     }
 
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error>> {

@@ -12,9 +12,10 @@ pub struct Config {
     #[serde(default)]
     pub logging: LoggingConfig,
     #[serde(default)]
+    pub api: APIConfig,
+    #[serde(default)]
     pub interfaces: HashMap<String, InterfaceConfig>,
 }
-
 // ---------------------------------------------------------------------------
 // Reticulum config 
 // ---------------------------------------------------------------------------
@@ -68,6 +69,8 @@ impl Default for IrohConfig {
     }
 }
 
+
+
 // ---------------------------------------------------------------------------
 // Logging config — unchanged from original
 // ---------------------------------------------------------------------------
@@ -100,6 +103,23 @@ pub enum InterfaceConfig {
 }
 
 // ---------------------------------------------------------------------------
+// LAN API config 
+// ---------------------------------------------------------------------------
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct APIConfig {
+    #[serde(default = "default_api_port")]
+    pub port: u16,
+}
+
+fn default_api_port() -> u16 { 37430 }
+
+impl Default for APIConfig {
+    fn default() -> Self {
+        Self { port: 37430 }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Defaults
 // ---------------------------------------------------------------------------
 
@@ -126,8 +146,9 @@ impl Default for LoggingConfig {
     }
 }
 
+
 // ---------------------------------------------------------------------------
-// Config loading — unchanged from original
+// Config loading 
 // ---------------------------------------------------------------------------
 
 impl Config {
@@ -186,6 +207,7 @@ impl Config {
             reticulum: ReticulumConfig::default(),
             iroh: IrohConfig::default(),
             logging: LoggingConfig::default(),
+            api: APIConfig::default(),   
             interfaces,
         }
     }

@@ -17,7 +17,7 @@ pub struct Config {
     pub interfaces: HashMap<String, InterfaceConfig>,
 }
 // ---------------------------------------------------------------------------
-// Reticulum config 
+// Reticulum config
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -69,10 +69,8 @@ impl Default for IrohConfig {
     }
 }
 
-
-
 // ---------------------------------------------------------------------------
-// Logging config — unchanged from original
+// Logging config
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -82,10 +80,10 @@ pub struct LoggingConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Interface config — unchanged from original
+// Interface config
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone,  Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum InterfaceConfig {
     TCPServerInterface {
@@ -103,7 +101,7 @@ pub enum InterfaceConfig {
 }
 
 // ---------------------------------------------------------------------------
-// LAN API config 
+// LAN API config
 // ---------------------------------------------------------------------------
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct APIConfig {
@@ -111,7 +109,9 @@ pub struct APIConfig {
     pub port: u16,
 }
 
-fn default_api_port() -> u16 { 37430 }
+fn default_api_port() -> u16 {
+    37430
+}
 
 impl Default for APIConfig {
     fn default() -> Self {
@@ -123,10 +123,18 @@ impl Default for APIConfig {
 // Defaults
 // ---------------------------------------------------------------------------
 
-fn default_true() -> bool { true }
-fn default_shared_port() -> u16 { 37428 }
-fn default_control_port() -> u16 { 37429 }
-fn default_loglevel() -> u8 { 4 }
+fn default_true() -> bool {
+    true
+}
+fn default_shared_port() -> u16 {
+    37428
+}
+fn default_control_port() -> u16 {
+    37429
+}
+fn default_loglevel() -> u8 {
+    4
+}
 
 impl Default for ReticulumConfig {
     fn default() -> Self {
@@ -146,9 +154,8 @@ impl Default for LoggingConfig {
     }
 }
 
-
 // ---------------------------------------------------------------------------
-// Config loading 
+// Config loading
 // ---------------------------------------------------------------------------
 
 impl Config {
@@ -207,7 +214,7 @@ impl Config {
             reticulum: ReticulumConfig::default(),
             iroh: IrohConfig::default(),
             logging: LoggingConfig::default(),
-            api: APIConfig::default(),   
+            api: APIConfig::default(),
             interfaces,
         }
     }
@@ -215,10 +222,10 @@ impl Config {
     pub fn log_filter(&self) -> &'static str {
         match self.logging.loglevel {
             0 | 1 => "error",
-            2     => "warn",
+            2 => "warn",
             3 | 4 => "info",
             5 | 6 => "debug",
-            _     => "trace",
+            _ => "trace",
         }
     }
 }

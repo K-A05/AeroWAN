@@ -1,5 +1,6 @@
+use crate::transport::iroh::IrohNode;
 use crate::utils::identity::load_api_key;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{
     Router,
     extract::{Request, State},
@@ -7,14 +8,22 @@ use axum::{
     middleware::Next,
     response::IntoResponse,
 };
-use iroh::Endpoint;
+
 use std::sync::Arc;
 
 use crate::daemon::Config;
 use std::path::Path;
 
+use iroh::EndpointId;
+use serde::Deserialize;
+
 pub struct AppState {
-    pub iroh_endpoint: Option<Endpoint>,
+    pub iroh_node: Option<Arc<IrohNode>>,
+}
+
+#[derive(Deserialize)]
+pub struct ConnectRequest {
+    pub node_id: EndpointId,
 }
 #[derive(Clone)]
 pub struct IamLayer {
@@ -45,8 +54,9 @@ pub async fn i_am_middleware(
 }
 
 pub async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    match &state.iroh_endpoint {
-        Some(endpoint) => (StatusCode::OK, format!("NodeID: {}", endpoint.id())),
+    // handles status requests to the API endpoint.
+    match &state.iroh_node {
+        Some(node) => (StatusCode::OK, format!("NodeID: {}", node.endpoint.id())),
         None => (
             StatusCode::OK,
             "Running in Reticulum-only mode, iroh disabled".to_string(),
@@ -55,12 +65,31 @@ pub async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResp
 }
 
 pub async fn peers_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    match &state.iroh_endpoint {
+    match &state.iroh_node {
         Some(_endpoint) => (StatusCode::OK, "[]".to_string()),
         None => (
             StatusCode::SERVICE_UNAVAILABLE,
             "iroh disabled, peer list unavailable".to_string(),
         ),
+    }
+}
+
+pub async fn connect_handler(
+    State(state): State<Arc<AppState>>,
+    axum::Json(body): axum::Json<ConnectRequest>,
+) -> impl IntoResponse {
+    match &state.iroh_node {
+        Some(node) => match node.connect(body.node_id).await {
+            Ok(conn) => (
+                StatusCode::OK,
+                format!("Connected to: {}", conn.remote_id()),
+            ),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Connection failed: {}", e),
+            ),
+        },
+        None => (StatusCode::SERVICE_UNAVAILABLE, "iroh disabled".to_string()),
     }
 }
 
@@ -72,14 +101,15 @@ impl LANServer {
     pub async fn start(
         config: &Config,
         config_dir: &Path,
-        iroh_endpoint: Option<Endpoint>,
+        iroh_node: Option<Arc<IrohNode>>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let api_key = load_api_key(config_dir)?; // define in identity.rs
-        let state = Arc::new(AppState { iroh_endpoint });
+        let state = Arc::new(AppState { iroh_node });
 
         let app = Router::new() // use the axum router to structure the Lan server API
             .route("/status", get(status_handler))
             .route("/peers", get(peers_handler))
+            .route("/connect", post(connect_handler))
             .layer(axum::middleware::from_fn_with_state(
                 api_key.clone(),
                 i_am_middleware,

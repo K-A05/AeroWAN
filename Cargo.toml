@@ -7,8 +7,15 @@ edition = "2024"
 name = "aerowan"
 path = "src/main.rs"
 
+[[bin]]
+name = "aerowan-tui"
+path = "src/bin/tui.rs"
+
 [dependencies]
 anyhow = "1.0"
+ratatui = "0.29"
+crossterm = "0.28"
+reqwest = { version = "0.12", features = ["json"] }
 iroh = "0.96.1"
 iroh-blobs = "0.98.0"
 iroh-docs = "0.96.0"
@@ -32,4 +39,3 @@ log = "0.4.29"
 env_logger = "0.11.9"
 rand = "0.8.5"
 axum = "0.8.8"
-

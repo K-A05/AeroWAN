@@ -2,6 +2,7 @@ use crate::{daemon::config::Config, utils::identity::load_or_create_iroh_key};
 use anyhow::Result;
 use iroh::endpoint::Connection;
 use iroh::{Endpoint, EndpointId};
+use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -55,6 +56,14 @@ impl IrohNode {
         Ok(connection)
     }
 }
+
+// impl IrohNode {
+//     // create a ticket to send a file
+//     pub async fn send(&self, path: &Path) -> anyhow::Result<String> {
+//         let ticket: String =
+//     }
+//     pub async fn recv(&self, ticket: &str, dest: &Path) -> anyhow::Result<()> {}
+// }
 
 impl IrohTransport {
     pub async fn init(

@@ -1,3 +1,4 @@
+use crate::daemon::Config;
 use crate::transport::iroh::IrohNode;
 use crate::utils::identity::load_api_key;
 use axum::routing::{get, post};
@@ -8,14 +9,10 @@ use axum::{
     middleware::Next,
     response::IntoResponse,
 };
-
-use std::sync::Arc;
-
-use crate::daemon::Config;
-use std::path::Path;
-
 use iroh::EndpointId;
 use serde::Deserialize;
+use std::path::Path;
+use std::sync::Arc;
 
 pub struct AppState {
     pub iroh_node: Option<Arc<IrohNode>>,
@@ -25,6 +22,13 @@ pub struct AppState {
 pub struct ConnectRequest {
     pub node_id: EndpointId,
 }
+
+#[derive(Deserialize)]
+pub struct ChatSendRequest {
+    pub node_id: String,
+    pub message: String,
+}
+
 #[derive(Clone)]
 pub struct IamLayer {
     api_key: String,
@@ -46,7 +50,6 @@ pub async fn i_am_middleware(
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "));
-
     match auth {
         Some(key) if key == api_key => Ok(next.run(req).await),
         _ => Err(StatusCode::UNAUTHORIZED),
@@ -54,7 +57,6 @@ pub async fn i_am_middleware(
 }
 
 pub async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    // handles status requests to the API endpoint.
     match &state.iroh_node {
         Some(node) => (StatusCode::OK, format!("NodeID: {}", node.endpoint.id())),
         None => (
@@ -66,7 +68,20 @@ pub async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResp
 
 pub async fn peers_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match &state.iroh_node {
-        Some(_endpoint) => (StatusCode::OK, "[]".to_string()),
+        Some(node) => {
+            let connections = node.connections.lock().await;
+            let peer_ids: Vec<String> = connections
+                .iter()
+                .map(|conn| conn.remote_id().to_string())
+                .collect();
+            match serde_json::to_string(&peer_ids) {
+                Ok(json) => (StatusCode::OK, json),
+                Err(e) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to serialize peers: {}", e),
+                ),
+            }
+        }
         None => (
             StatusCode::SERVICE_UNAVAILABLE,
             "iroh disabled, peer list unavailable".to_string(),
@@ -93,6 +108,38 @@ pub async fn connect_handler(
     }
 }
 
+pub async fn chat_send_handler(
+    State(state): State<Arc<AppState>>,
+    axum::Json(body): axum::Json<ChatSendRequest>,
+) -> impl IntoResponse {
+    match &state.iroh_node {
+        Some(node) => match node.send_message(&body.node_id, &body.message).await {
+            Ok(()) => (StatusCode::OK, "message sent".to_string()),
+            Err(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to send message: {}", e),
+            ),
+        },
+        None => (StatusCode::SERVICE_UNAVAILABLE, "iroh disabled".to_string()),
+    }
+}
+
+pub async fn chat_messages_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match &state.iroh_node {
+        Some(node) => {
+            let messages = node.drain_inbox().await;
+            match serde_json::to_string(&messages) {
+                Ok(json) => (StatusCode::OK, json),
+                Err(e) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to serialize messages: {}", e),
+                ),
+            }
+        }
+        None => (StatusCode::SERVICE_UNAVAILABLE, "iroh disabled".to_string()),
+    }
+}
+
 pub struct LANServer {
     handle: tokio::task::JoinHandle<()>,
 }
@@ -103,28 +150,25 @@ impl LANServer {
         config_dir: &Path,
         iroh_node: Option<Arc<IrohNode>>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let api_key = load_api_key(config_dir)?; // define in identity.rs
+        let api_key = load_api_key(config_dir)?;
         let state = Arc::new(AppState { iroh_node });
-
-        let app = Router::new() // use the axum router to structure the Lan server API
+        let app = Router::new()
             .route("/status", get(status_handler))
             .route("/peers", get(peers_handler))
             .route("/connect", post(connect_handler))
+            .route("/chat/send", post(chat_send_handler))
+            .route("/chat/messages", get(chat_messages_handler))
             .layer(axum::middleware::from_fn_with_state(
                 api_key.clone(),
                 i_am_middleware,
             ))
             .with_state(state);
-
         let addr = format!("0.0.0.0:{}", config.api.port);
         let listener = tokio::net::TcpListener::bind(&addr).await?;
-
         let handle = tokio::spawn(async move {
             axum::serve(listener, app).await.unwrap();
         });
-
         log::info!("API server listening on {}", addr);
-
         Ok(Self { handle })
     }
 }

@@ -22,10 +22,10 @@ impl Daemon {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let (config, config_path) = Config::load()?;
 
-        env_logger::Builder::from_env(
-            env_logger::Env::default().default_filter_or(config.log_filter()),
-        )
-        .init();
+        // env_logger::Builder::from_env(
+        //     env_logger::Env::default().default_filter_or(config.log_filter()),
+        // )
+        // .init();
 
         log::info!("AeroWAN daemon starting");
         log::info!("Configuration loaded from: {}", config_path.display());

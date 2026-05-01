@@ -7,10 +7,6 @@ edition = "2024"
 name = "aerowan"
 path = "src/main.rs"
 
-[[bin]]
-name = "aerowan-tui"
-path = "src/bin/tui.rs"
-
 [dependencies]
 anyhow = "1.0"
 ratatui = "0.29"

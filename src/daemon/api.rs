@@ -15,7 +15,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 pub struct AppState {
-    pub iroh_node: Option<Arc<IrohNode>>,
+    pub iroh_node: Option<Arc<IrohNode>>, // reference to the Iroh node struct for use in the API.
 }
 
 #[derive(Deserialize)]
@@ -31,16 +31,18 @@ pub struct ChatSendRequest {
 
 #[derive(Clone)]
 pub struct IamLayer {
+    // authentication layer for the API
     api_key: String,
 }
 
 impl IamLayer {
     pub fn new(api_key: String) -> Self {
-        Self { api_key }
+        Self { api_key } // API key constructor
     }
 }
 
 pub async fn i_am_middleware(
+    // checks to see if the incoming request has a valid API  key,
     State(api_key): State<String>,
     req: Request,
     next: Next,
@@ -58,6 +60,7 @@ pub async fn i_am_middleware(
 
 pub async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match &state.iroh_node {
+        // returns the iroh node id for the application, if enabled, else a plain text message.
         Some(node) => (StatusCode::OK, format!("NodeID: {}", node.endpoint.id())),
         None => (
             StatusCode::OK,
@@ -68,6 +71,7 @@ pub async fn status_handler(State(state): State<Arc<AppState>>) -> impl IntoResp
 
 pub async fn peers_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match &state.iroh_node {
+        // iterated over the live connection list and returns a nodeID as a JSON string, this is polled by the TUI to keep the peers panel up to date.
         Some(node) => {
             let connections = node.connections.lock().await;
             let peer_ids: Vec<String> = connections
@@ -90,6 +94,7 @@ pub async fn peers_handler(State(state): State<Arc<AppState>>) -> impl IntoRespo
 }
 
 pub async fn connect_handler(
+    // dials a remote peer by their node ID, a successful connection is written to the shared connection list and a chat reader is spawned for the connection.
     State(state): State<Arc<AppState>>,
     axum::Json(body): axum::Json<ConnectRequest>,
 ) -> impl IntoResponse {
@@ -109,6 +114,7 @@ pub async fn connect_handler(
 }
 
 pub async fn chat_send_handler(
+    // creates a unidirectional QUIC stream to the target peer and writed the length pre-fixed message
     State(state): State<Arc<AppState>>,
     axum::Json(body): axum::Json<ChatSendRequest>,
 ) -> impl IntoResponse {
@@ -125,6 +131,7 @@ pub async fn chat_send_handler(
 }
 
 pub async fn chat_messages_handler(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    // drains all the messages from the inbox and returns them as a JSON array.
     match &state.iroh_node {
         Some(node) => {
             let messages = node.drain_inbox().await;
@@ -153,11 +160,11 @@ impl LANServer {
         let api_key = load_api_key(config_dir)?;
         let state = Arc::new(AppState { iroh_node });
         let app = Router::new()
-            .route("/status", get(status_handler))
-            .route("/peers", get(peers_handler))
-            .route("/connect", post(connect_handler))
-            .route("/chat/send", post(chat_send_handler))
-            .route("/chat/messages", get(chat_messages_handler))
+            .route("/status", get(status_handler)) // returns node ID/ mode of operation
+            .route("/peers", get(peers_handler)) // returns peers.
+            .route("/connect", post(connect_handler)) // connection endpoint to connect with another peer.
+            .route("/chat/send", post(chat_send_handler)) // endpoint for sending messages.
+            .route("/chat/messages", get(chat_messages_handler)) // handle messages in the queue.
             .layer(axum::middleware::from_fn_with_state(
                 api_key.clone(),
                 i_am_middleware,

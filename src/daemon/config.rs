@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct Config {
+    // struct to wrap around all the configuration values needed for the application.
     #[serde(default)]
     pub reticulum: ReticulumConfig,
     #[serde(default)]
@@ -51,10 +52,8 @@ pub struct ReticulumConfig {
 pub struct IrohConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
-    /// 0 lets the OS pick — avoids hardcoded port conflicts
     #[serde(default)]
     pub bind_port: u16,
-    /// Empty string means use Iroh's built-in default relay nodes
     #[serde(default)]
     pub relay_url: String,
 }
@@ -83,7 +82,7 @@ pub struct LoggingConfig {
 // Interface config
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)] // required for reticulum to choose the interface for transmitting and rece
 #[serde(tag = "type")]
 pub enum InterfaceConfig {
     TCPServerInterface {

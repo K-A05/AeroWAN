@@ -3,15 +3,17 @@ use rand_core::{OsRng, RngCore};
 use reticulum::identity::PrivateIdentity;
 use std::path::Path;
 
-const IDENTITY: &str = "identity.key";
-const IROH_KEY: &str = "iroh.key";
+const IDENTITY: &str = "identity.key"; // identity file for the reticulum network stack.
+const IROH_KEY: &str = "iroh.key"; // identity file for the iroh networking stack.
 
 pub fn load_or_create_reticulum_identity(
+    // function to load the persisted cryptographic idenity value  from the configuration directory (reticulum)
     config_dir: &Path,
 ) -> Result<PrivateIdentity, Box<dyn std::error::Error>> {
     let key_path = config_dir.join(IDENTITY);
 
     if key_path.exists() {
+        // check to see if the file exists, or generate it on first launch.
         let hex = std::fs::read_to_string(&key_path)?;
         let identity = PrivateIdentity::new_from_hex_string(hex.trim())
             .map_err(|e| format!("Failed to load Reticulum identity: {:?}", e))?;
@@ -55,6 +57,7 @@ pub fn load_or_create_iroh_key(config_dir: &Path) -> Result<SecretKey, Box<dyn s
 }
 
 pub fn load_api_key(config_dir: &Path) -> Result<String, Box<dyn std::error::Error>> {
+    // function to load or generate the API key.
     let key_path = config_dir.join("api.key");
 
     if key_path.exists() {

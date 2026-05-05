@@ -20,12 +20,8 @@ pub struct Daemon {
 
 impl Daemon {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        // create a new daemon.
         let (config, config_path) = Config::load()?;
-
-        // env_logger::Builder::from_env(
-        //     env_logger::Env::default().default_filter_or(config.log_filter()),
-        // )
-        // .init();
 
         log::info!("AeroWAN daemon starting");
         log::info!("Configuration loaded from: {}", config_path.display());
